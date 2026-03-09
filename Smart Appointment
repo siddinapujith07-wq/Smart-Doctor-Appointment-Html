@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Smart Doctor Appointment Waiting List System</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+/* CO1, CO2 – Internet fundamentals, HTML structure, basic & comprehensive CSS (layout, colors, typography, responsive) */
+
+:root{--primary:#1a4d7a;--primary-dark:#0f3354;--accent:#28a745;--bg:#f2f5f9}
+*{box-sizing:border-box}
+body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:#222}
+a{text-decoration:none;color:inherit}
+.navbar{position:sticky;top:0;z-index:1000;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.08)}
+.navbar-inner{max-width:1100px;margin:auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
+.nav-logo{font-weight:bold;color:var(--primary)}
+.nav-links{display:flex;gap:20px}
+.nav-links a{font-size:14px;padding-bottom:2px;border-bottom:2px solid transparent}
+.nav-links a:hover{border-bottom-color:var(--primary)}
+header{background:linear-gradient(120deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:40px 15px 60px}
+header h1{margin-bottom:10px}
+header p{margin-top:0;opacity:.9}
+.hero-btns{margin-top:20px;display:flex;justify-content:center;gap:10px}
+.btn-primary,.btn-outline{border-radius:4px;padding:10px 18px;border:1px solid #fff;cursor:pointer}
+.btn-primary{background:#fff;color:var(--primary);border:none;font-weight:600}
+.btn-outline{background:transparent;color:#fff}
+.btn-primary:hover{background:#f2f5f9}
+.btn-outline:hover{background:rgba(255,255,255,.1)}
+.section{max-width:1100px;margin:30px auto;padding:0 15px}
+.section h2{text-align:center;margin-bottom:10px}
+.section-subtitle{text-align:center;font-size:14px;color:#555;margin-bottom:25px}
+.doctor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
+.doctor-card{background:#fff;border-radius:10px;padding:15px;box-shadow:0 3px 10px rgba(0,0,0,.06);text-align:left}
+.doctor-name{font-weight:bold;margin-bottom:5px}
+.doctor-spec{font-size:14px;color:#555}
+.doctor-meta{margin-top:10px;font-size:13px;color:#777}
+.card{background:#fff;padding:20px;margin:20px auto;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.1)}
+.card h3{margin-top:0}
+.appointment-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr);gap:20px}
+@media(max-width:900px){.appointment-layout{grid-template-columns:1fr}}
+input,select{padding:10px;margin:5px 5px 5px 0;width:220px}
+button{padding:10px 15px;background:var(--primary);color:#fff;border:none;cursor:pointer;border-radius:5px}
+button:hover{background:var(--primary-dark)}
+.search{margin-top:10px;width:250px}
+.smsBtn{background:var(--accent)}
+.smsBtn:hover{background:#1e7e34}
+table{width:100%;border-collapse:collapse;margin-top:15px}
+th,td{border:1px solid #ddd;padding:8px;font-size:14px}
+th{background:var(--primary);color:#fff}
+.priority{color:red;font-weight:bold}
+.error-message{color:#b00020;margin-top:10px;font-size:14px}
+.flex-row{display:flex;flex-wrap:wrap;gap:10px}
+.contact-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
+@media(max-width:800px){.contact-grid{grid-template-columns:1fr}}
+.contact-card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,.06)}
+.contact-card p{margin:5px 0;font-size:14px}
+footer{background:#111827;color:#e5e7eb;padding:20px 15px;margin-top:40px;font-size:13px}
+.footer-inner{max-width:1100px;margin:auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+</style>
+</head>
+<body>
+<nav class="navbar">
+  <div class="navbar-inner">
+    <div class="nav-logo">Smart Clinic</div>
+    <div class="nav-links">
+      <!-- CO1/CO2 – Navigation links, anchors, semantics -->
+      <a href="#home">Home</a>
+      <a href="#doctors">Doctors</a>
+      <a href="#appointments">Appointments</a>
+      <a href="#history">History</a>
+      <a href="#contact">Contact</a>
+      <a href="admin.html">Admin</a> <!-- CO5 – multi-page navigation (deployment-ready structure) -->
+    </div>
+  </div>
+</nav>
+
+<header id="home">
+  <!-- CO1 – HTML structure & basic styling -->
+  <h1>Smart Doctor Appointment Waiting List System</h1>
+  <p>Real-time token management and intelligent waiting time prediction for your clinic.</p>
+  <div class="hero-btns">
+    <button class="btn-primary" onclick="scrollToSection('appointments')">Book Appointment</button>
+    <button class="btn-outline" onclick="scrollToSection('doctors')">View Doctors</button>
+    <!-- CO4 – DOM interactivity via onclick, smooth scroll -->
+  </div>
+</header>
+
+<section class="section" id="doctors">
+  <h2>Our Doctors</h2>
+  <p class="section-subtitle">Choose from experienced specialists available at our clinic.</p>
+  <div class="doctor-grid">
+    <!-- CO2 – semantic content cards with CSS grid layout -->
+    <div class="doctor-card">
+      <div class="doctor-name">Dr Kumar</div>
+      <div class="doctor-spec">Cardiologist</div>
+      <div class="doctor-meta">Experience: 12+ years<br>Timings: 9:00 AM – 1:00 PM</div>
+    </div>
+    <div class="doctor-card">
+      <div class="doctor-name">Dr Reddy</div>
+      <div class="doctor-spec">General Physician</div>
+      <div class="doctor-meta">Experience: 8+ years<br>Timings: 10:00 AM – 4:00 PM</div>
+    </div>
+    <div class="doctor-card">
+      <div class="doctor-name">Dr Sharma</div>
+      <div class="doctor-spec">Pediatrician</div>
+      <div class="doctor-meta">Experience: 10+ years<br>Timings: 5:00 PM – 9:00 PM</div>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="appointments">
+  <h2>Appointments & Live Queue</h2>
+  <p class="section-subtitle">Book your slot and track your estimated waiting time in real-time.</p>
+  <div class="appointment-layout">
+    <div class="card">
+      <h3>Book Appointment</h3>
+      <div class="flex-row">
+        <!-- CO2 – HTML form fields, attributes (placeholder, pattern), basic validation hooks -->
+        <input id="name" placeholder="Patient Name">
+        <input id="phone" type="tel" placeholder="Phone Number" pattern="[0-9]{10}" title="Enter 10 digit mobile number">
+        <input id="time" type="time">
+        <select id="doctor">
+          <option value="">Select Doctor</option>
+          <option>Dr Kumar</option><option>Dr Reddy</option><option>Dr Sharma</option>
+        </select>
+        <select id="type">
+          <option value="Normal">Normal</option>
+          <option value="Emergency">Emergency</option>
+        </select>
+        <input id="problem" placeholder="Health Problem">
+      </div>
+      <div id="formError" class="error-message" aria-live="polite"></div>
+      <br>
+      <button id="btnAdd">Get Token</button> <!-- CO4 – JS event-driven form handling -->
+    </div>
+
+    <div class="card">
+      <h3>Live Waiting Queue</h3>
+      <!-- CO4 – search filter input bound to DOM updates -->
+      <input class="search" id="search" placeholder="Search by patient name or phone">
+      <div id="currentInfo" style="font-size:14px;margin-top:5px;color:#555"></div>
+      <!-- CO2 – table-based structured data display -->
+      <table>
+        <thead>
+        <tr>
+          <th>Token</th><th>Name</th><th>Phone</th><th>Doctor</th><th>Type</th>
+          <th>Time</th><th>Problem</th><th>Estimated Wait</th><th>SMS Reminder</th>
+        </tr>
+        </thead>
+        <tbody id="list"></tbody>
+      </table>
+      <br>
+      <button id="btnNext">Doctor Call Next</button> <!-- CO4 – DOM event to change queue state -->
+    </div>
+  </div>
+</section>
+
+<section class="section" id="history">
+  <h2>Appointment History</h2>
+  <p class="section-subtitle">Completed consultations stored locally in your browser.</p>
+  <div class="card">
+    <!-- CO4 – search/filter over history table -->
+    <input id="historySearch" placeholder="Search by name or phone" class="search">
+    <table>
+      <thead>
+      <tr>
+        <th>Token</th><th>Name</th><th>Phone</th><th>Doctor</th>
+        <th>Type</th><th>Time</th><th>Problem</th><th>Completed At</th>
+      </tr>
+      </thead>
+      <tbody id="historyList"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="section" id="contact">
+  <h2>Contact & Location</h2>
+  <p class="section-subtitle">Visit us or call to know more about our services.</p>
+  <div class="contact-grid">
+    <div class="contact-card">
+      <h3>Clinic Details</h3>
+      <p><strong>Address:</strong> 123 Smart Health Street, Hyderabad</p>
+      <p><strong>Phone:</strong> +91 98765 43210</p>
+      <p><strong>Working Hours:</strong> 9:00 AM – 9:00 PM (All days)</p>
+      <p><strong>Email:</strong> info@smartclinic.com</p>
+    </div>
+    <div class="contact-card">
+      <h3>Quick Message (UI only)</h3>
+      <p>This is a static form; you can later connect it to a backend or email API.</p>
+      <input placeholder="Your Name" style="width:100%;margin-bottom:8px">
+      <input type="email" placeholder="Your Email" style="width:100%;margin-bottom:8px">
+      <textarea placeholder="Message" rows="4" style="width:100%;padding:8px"></textarea>
+      <br><br>
+      <button disabled title="Connect to backend to enable">Send Message</button>
+      <!-- CO5 – placeholder for API integration & deployment in future -->
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-inner">
+    <div>© <span id="year"></span> Smart Clinic. All rights reserved.</div>
+    <div>Smart Doctor Appointment Waiting List System.</div>
+  </div>
+</footer>
+
+<script>
+/* CO3 – JavaScript fundamentals (constants, variables, objects) */
+/* CO4 – DOM & events, browser APIs (Notification, speechSynthesis, localStorage) */
+/* CO5 – Advanced web app behavior suitable for deployment */
+
+const DUR=8, WIN=30, KEYS={Q:"queue",T:"token",H:"history"};
+let queue=[],history=[],token=1,notifReq=false;
+const $=id=>document.getElementById(id);
+const esc=s=>s?String(s).replace(/[&<>'"]/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[t]||t)):"";
+
+function loadData(){  // CO3 – JSON parsing, error handling idea
+  try{
+    queue=JSON.parse(localStorage.getItem(KEYS.Q))||[];
+    token=JSON.parse(localStorage.getItem(KEYS.T))||1;
+    history=JSON.parse(localStorage.getItem(KEYS.H))||[];
+  }catch{queue=[];history=[];token=1}
+}
+
+function saveData(){ // CO3/CO4 – using localStorage for persistent state
+  localStorage.setItem(KEYS.Q,JSON.stringify(queue));
+  localStorage.setItem(KEYS.T,JSON.stringify(token));
+  localStorage.setItem(KEYS.H,JSON.stringify(history));
+}
+
+function reqNotif(){ // CO4 – browser Notification API usage
+  if(!notifReq&&"Notification"in window){Notification.requestPermission();notifReq=true;}
+}
+
+function speak(t){ // CO4 – Web Speech API for interactivity
+  if(!("speechSynthesis"in window))return;
+  const u=new SpeechSynthesisUtterance(t);u.lang="en-US";speechSynthesis.speak(u);
+}
+
+function scrollToSection(id){
+  const el=$(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
+}
+
+function vals(){ // CO3 – object return, basic JS expressions
+  return{n:$("name").value.trim(),p:$("phone").value.trim(),tm:$("time").value,d:$("doctor").value,ty:$("type").value,pr:$("problem").value.trim()};
+}
+
+function validate(v){ // CO3 – conditions, regex, arrays
+  const e=[];
+  if(!v.n)e.push("Patient name is required.");
+  if(!v.p)e.push("Phone number is required.");else if(!/^[0-9]{10}$/.test(v.p))e.push("Phone number must be 10 digits.");
+  if(!v.tm)e.push("Appointment time is required.");
+  if(!v.d)e.push("Doctor selection is required.");
+  if(!v.pr)e.push("Health problem is required.");
+  return e;
+}
+
+function showErr(e){$("formError").textContent=e.join(" ");}
+
+function clearForm(){["name","phone","time","problem"].forEach(id=>$(id).value="");$("doctor").value="";$("type").value="Normal";}
+
+function waitM(p){ // CO3/CO4 – array filter, findIndex, simple math
+  const dq=queue.filter(x=>x.doctor===p.doctor);
+  const pos=dq.findIndex(x=>x.token===p.token);
+  return(pos+1)*DUR;
+}
+
+function addPatient(){ // CO3/CO4 – event-driven JS logic
+  reqNotif();
+  const v=vals(),e=validate(v);
+  if(e.length)return showErr(e);
+  showErr([]);
+  const p={token:token++,name:v.n,phone:v.p,time:v.tm,doctor:v.d,type:v.ty,problem:v.pr,notified:false};
+  if(v.ty==="Emergency"){
+    const i=queue.findIndex(x=>x.type==="Normal");
+    i===-1?queue.push(p):queue.splice(i,0,p);
+  }else queue.push(p);
+  saveData();renderQueue();clearForm();
+}
+
+function nextPatient(){ // CO4 – modifies queue and pushes to history
+  if(!queue.length)return alert("No patients waiting.");
+  const p=queue[0];
+  history.push({...p,completedAt:new Date().toISOString()});
+  alert(`Now Consulting: ${p.name} with ${p.doctor}`);
+  queue.shift();saveData();renderQueue();renderHistory();
+}
+
+function row(p){ // CO4 – DOM create + innerHTML
+  const tr=document.createElement("tr");
+  tr.innerHTML=`
+    <td>${p.token}</td><td>${esc(p.name)}</td><td>${esc(p.phone)}</td>
+    <td>${esc(p.doctor)}</td>
+    <td class="${p.type==="Emergency"?"priority":""}">${esc(p.type)}</td>
+    <td>${esc(p.time)}</td><td>${esc(p.problem)}</td>
+    <td>${waitM(p)} mins</td><td></td>`;
+  const b=document.createElement("button");
+  b.className="smsBtn";b.textContent="Send SMS";
+  b.onclick=()=>sendSMS(p.phone,p.name);
+  tr.lastElementChild.appendChild(b);
+  return tr;
+}
+
+function renderQueue(f=""){ // CO4 – DOM update based on state
+  const tb=$("list"),info=$("currentInfo");
+  tb.innerHTML="";
+  if(!queue.length)info.textContent="No patients waiting.";
+  else{
+    const[fst,nxt]=[queue[0],queue[1]];
+    info.textContent=`Next: ${fst.name} (${fst.doctor})`+(nxt?` | After that: ${nxt.name}`:"");
+  }
+  const q=f.toLowerCase();
+  queue.forEach(p=>{
+    if(q && !p.name.toLowerCase().includes(q) && !p.phone.toLowerCase().includes(q))return;
+    tb.appendChild(row(p));
+  });
+}
+
+function renderHistory(f=""){ // CO4 – DOM history view, sort, filter
+  const tb=$("historyList");if(!tb)return;
+  tb.innerHTML="";
+  const q=f.toLowerCase();
+  [...history].sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt))
+    .forEach(h=>{
+      if(q && !h.name.toLowerCase().includes(q) && !h.phone.toLowerCase().includes(q))return;
+      const tr=document.createElement("tr");
+      tr.innerHTML=`
+        <td>${h.token}</td><td>${esc(h.name)}</td><td>${esc(h.phone)}</td>
+        <td>${esc(h.doctor)}</td>
+        <td class="${h.type==="Emergency"?"priority":""}">${esc(h.type)}</td>
+        <td>${esc(h.time)}</td><td>${esc(h.problem)}</td>
+        <td>${new Date(h.completedAt).toLocaleString()}</td>`;
+      tb.appendChild(tr);
+    });
+}
+
+function sendSMS(ph,name){ // CO4 – device integration via sms: URL
+  const m=`Hello ${name}, this is a reminder from the clinic. Your appointment is coming soon. Please be ready.`;
+  window.location.href=`sms:${encodeURIComponent(ph)}?body=${encodeURIComponent(m)}`;
+}
+
+function checkUpcoming(){ // CO4/CO5 – timed notifications, scheduling logic
+  const now=new Date(),cur=now.getHours()*60+now.getMinutes();
+  queue.forEach(p=>{
+    if(!p.time)return;
+    const[h,m]=p.time.split(":"),ap=parseInt(h,10)*60+parseInt(m,10),d=ap-cur;
+    if(d<=WIN && d>0 && !p.notified){
+      p.notified=true;saveData();
+      const msg=`Reminder: ${p.name}, your appointment with ${p.doctor} is in ${d} minutes. Please be ready.`;
+      if("Notification"in window && Notification.permission==="granted")
+        new Notification("Doctor Appointment Reminder",{body:msg});
+      speak(msg);
+    }
+  });
+}
+
+function init(){ // CO3/CO4 – application bootstrap
+  loadData();renderQueue();renderHistory();
+  $("btnAdd").onclick=addPatient;
+  $("btnNext").onclick=nextPatient;
+  $("search").onkeyup=()=>renderQueue($("search").value);
+  $("historySearch").onkeyup=()=>renderHistory($("historySearch").value);
+  $("year").textContent=new Date().getFullYear();
+  checkUpcoming();setInterval(checkUpcoming,60000);
+}
+document.addEventListener("DOMContentLoaded",init);
+</script>
+</body>
+</html>
