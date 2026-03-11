@@ -1,0 +1,497 @@
+import java.io.*;
+import java.util.*;
+
+/**
+ * Smart Doctor Appointment Waiting List System
+ * DSA Version for Console (can act as backend logic for your HTML UI)
+ *
+ * DSA used:
+ * - Singly Linked List  : PatientNode for current queue               // CO2
+ * - Singly Linked List  : HistoryNode for completed appointments      // CO2
+ * - Stack<String>       : Navigation stack (screens visited)          // CO3
+ * - HashMap<Integer,PatientNode> : Token -> Node (O(1) search)        // CO4
+ * - HashMap<String,PatientNode>  : Phone -> Node (O(1) search)        // CO4
+ * - QuickSort on array  : To display sorted by appointment time       // CO1
+ * - File save/load      : Serialization of lists to .dat files
+ */
+
+
+// ---------- NODE CLASSES (Serializable) ----------
+
+class PatientNode implements Serializable { // CO2: Node for queue ADT (singly linked list)
+    int token;
+    String name, phone, doctor, type, time, problem;
+    boolean notified;
+    transient PatientNode next; // 'next' is not serialized  // CO2: Linked list pointer
+
+    public PatientNode(int token, String name, String phone,
+                       String doctor, String type, String time, String problem) {
+        this.token = token;
+        this.name = name;
+        this.phone = phone;
+        this.doctor = doctor;
+        this.type = type;
+        this.time = time;
+        this.problem = problem;
+        this.notified = false;
+    }
+}
+
+
+class HistoryNode implements Serializable { // CO2: Node for history ADT (singly linked list)
+    int token;
+    String name, phone, doctor, type, time, problem, completedAt;
+    transient HistoryNode next; // CO2
+
+    public HistoryNode(PatientNode p, String completedAt) {
+        this.token = p.token;
+        this.name = p.name;
+        this.phone = p.phone;
+        this.doctor = p.doctor;
+        this.type = p.type;
+        this.time = p.time;
+        this.problem = p.problem;
+        this.completedAt = completedAt;
+    }
+}
+
+
+// ---------- MAIN CLASS ----------
+
+public class SmartClinicDSA {
+
+    private static final int DUR = 8;   // minutes per patient per doctor
+    private static final int WIN = 30;  // reminder window in minutes
+
+    // Files for persistence
+    private static final String QUEUE_FILE = "queue.dat";
+    private static final String HISTORY_FILE = "history.dat";
+    private static final String TOKEN_FILE = "token.dat";
+
+    // Queue as Singly Linked List
+    private static PatientNode front = null; // CO2: front pointer of queue
+    private static PatientNode rear = null;  // CO2: rear pointer of queue
+
+    // History as Singly Linked List
+    private static HistoryNode historyHead = null; // CO2: head of history list
+
+    // Hashing for O(1) lookup
+    private static HashMap<Integer, PatientNode> tokenMap = new HashMap<>();  // CO4
+    private static HashMap<String, PatientNode> phoneMap = new HashMap<>();   // CO4
+
+    // Navigation stack
+    private static Stack<String> navStack = new Stack<>(); // CO3: stack ADT
+
+    private static int nextToken = 1;
+    private static Scanner sc = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        loadData();          // load queue + history + token if files exist
+        runMainMenu();
+        saveData();          // final save on exit
+    }
+
+    // ===================== SAVE / LOAD ========================
+
+    private static void loadData() {
+        // Load queue
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(QUEUE_FILE))) {
+            @SuppressWarnings("unchecked")
+            List<PatientNode> list = (List<PatientNode>) in.readObject();
+            front = rear = null;
+            tokenMap.clear();
+            phoneMap.clear();
+            for (PatientNode p : list) {
+                p.next = null;
+                enqueuePatient(p);  // rebuild linked list + maps  // CO2 + CO4
+            }
+        } catch (Exception e) {
+            // first run or error -> start fresh
+        }
+
+        // Load history
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(HISTORY_FILE))) {
+            @SuppressWarnings("unchecked")
+            List<HistoryNode> list = (List<HistoryNode>) in.readObject();
+            historyHead = null;
+            for (HistoryNode h : list) {
+                h.next = historyHead;
+                historyHead = h; // CO2: insert at head of history list
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // Load nextToken
+        try (DataInputStream in = new DataInputStream(new FileInputStream(TOKEN_FILE))) {
+            nextToken = in.readInt();
+        } catch (Exception e) {
+            nextToken = 1;
+        }
+    }
+
+    private static void saveData() {
+        // queue -> list
+        List<PatientNode> qList = new ArrayList<>();
+        PatientNode t = front;
+        while (t != null) {
+            qList.add(t);
+            t = t.next; // CO2: traversal of queue list
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(QUEUE_FILE))) {
+            out.writeObject(qList);
+        } catch (IOException e) {
+            System.out.println("Error saving queue: " + e.getMessage());
+        }
+
+        // history -> list
+        List<HistoryNode> hList = new ArrayList<>();
+        HistoryNode h = historyHead;
+        while (h != null) {
+            hList.add(h);
+            h = h.next; // CO2: traversal of history list
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(HISTORY_FILE))) {
+            out.writeObject(hList);
+        } catch (IOException e) {
+            System.out.println("Error saving history: " + e.getMessage());
+        }
+
+        // nextToken
+        try (DataOutputStream out = new DataOutputStream(new FileOutputStream(TOKEN_FILE))) {
+            out.writeInt(nextToken);
+        } catch (IOException e) {
+            System.out.println("Error saving token: " + e.getMessage());
+        }
+    }
+
+    // ===================== MAIN MENU ========================
+
+    private static void runMainMenu() {
+        navStack.push("Home"); // CO3: push current screen
+        boolean run = true;
+        while (run) {
+            System.out.println("\n=== SMART DOCTOR APPOINTMENT WAITING LIST SYSTEM (DSA) ===");
+            System.out.println("1. Add Patient (Get Token)");
+            System.out.println("2. View Live Queue");
+            System.out.println("3. Doctor Call Next (Complete Appointment)");
+            System.out.println("4. View History");
+            System.out.println("5. Search Patient (Token / Phone)");
+            System.out.println("6. Analytics (Sort by Time)");
+            System.out.println("7. Show Navigation Stack");
+            System.out.println("8. Exit");
+            System.out.print("Choice: ");
+
+            String c = sc.nextLine();
+            switch (c) {
+                case "1" -> addPatientMenu();       // CO2 + CO4
+                case "2" -> printQueue();           // CO2
+                case "3" -> completeNextPatient();  // CO2 + CO4
+                case "4" -> printHistory();         // CO2
+                case "5" -> searchMenu();           // CO4
+                case "6" -> analyticsMenu();        // CO1
+                case "7" -> System.out.println("Stack: " + navStack); // CO3
+                case "8" -> run = false;
+                default -> System.out.println("Invalid choice.");
+            }
+        }
+        navStack.pop(); // CO3: pop on exit
+        System.out.println("Exiting SmartClinicDSA...");
+    }
+
+    // ===================== ADD PATIENT ======================
+
+    private static void addPatientMenu() {
+        navStack.push("AddPatient"); // CO3
+        System.out.println("\n--- Book Appointment / Get Token ---");
+        System.out.print("Patient Name: ");
+        String name = sc.nextLine().trim();
+
+        System.out.print("Phone (10 digits): ");
+        String phone = sc.nextLine().trim();
+
+        System.out.print("Appointment Time (HH:MM, 24-hr): ");
+        String time = sc.nextLine().trim();
+
+        System.out.print("Doctor (Dr Kumar / Dr Reddy / Dr Sharma): ");
+        String doctor = sc.nextLine().trim();
+
+        System.out.print("Type (Normal / Emergency): ");
+        String type = sc.nextLine().trim();
+        if (!type.equalsIgnoreCase("Emergency")) {
+            type = "Normal";
+        }
+
+        System.out.print("Health Problem: ");
+        String problem = sc.nextLine().trim();
+
+        List<String> errors = validate(name, phone, time, doctor, problem);
+        if (!errors.isEmpty()) {
+            System.out.println("Form Errors:");
+            for (String e : errors) System.out.println("- " + e);
+            navStack.pop();
+            return;
+        }
+
+        PatientNode p = new PatientNode(nextToken++, name, phone, doctor, type, time, problem);
+        enqueuePatient(p); // CO2 enqueue, CO4 update maps
+        System.out.println("Token Generated Successfully. Your Token No: " + p.token);
+        saveData(); // save after change
+        navStack.pop();
+    }
+
+    // Linked List enqueue with priority: Emergency before first Normal
+    private static void enqueuePatient(PatientNode p) { // CO2: queue ADT using linked list
+        if (front == null) {
+            front = rear = p; // first node
+        } else if (p.type.equalsIgnoreCase("Emergency")) {
+            // find first Normal and insert before it
+            PatientNode prev = null, curr = front;
+            while (curr != null && curr.type.equalsIgnoreCase("Emergency")) {
+                prev = curr;
+                curr = curr.next;
+            }
+            if (prev == null) {        // insert at head
+                p.next = front;
+                front = p;
+            } else {                   // insert between prev and curr
+                prev.next = p;
+                p.next = curr;
+                if (curr == null) rear = p;
+            }
+        } else {
+            // Normal -> insert at end
+            rear.next = p;
+            rear = p;
+        }
+        tokenMap.put(p.token, p);   // CO4: hash insert
+        phoneMap.put(p.phone, p);   // CO4: hash insert
+    }
+
+    // ===================== VALIDATION =======================
+
+    private static List<String> validate(String name, String phone, String time,
+                                         String doctor, String problem) {
+        List<String> e = new ArrayList<>();
+        if (name.isEmpty()) e.add("Patient name is required.");
+        if (phone.isEmpty()) e.add("Phone number is required.");
+        else if (!phone.matches("\\d{10}")) e.add("Phone number must be 10 digits.");
+        if (time.isEmpty()) e.add("Appointment time is required.");
+        if (doctor.isEmpty()) e.add("Doctor selection is required.");
+        if (problem.isEmpty()) e.add("Health problem is required.");
+        return e;
+    }
+
+    // ===================== QUEUE DISPLAY ====================
+
+    private static void printQueue() {
+        navStack.push("Queue"); // CO3
+        if (front == null) {
+            System.out.println("\n[Queue] No patients waiting.");
+            navStack.pop();
+            return;
+        }
+        System.out.println("\n--- Live Waiting Queue (Linked List) ---");
+        PatientNode temp = front;
+        PatientNode fst = front;
+        PatientNode nxt = front.next;
+        System.out.println("Next: " + fst.name + " (" + fst.doctor + ")" +
+                (nxt != null ? " | After that: " + nxt.name : ""));
+
+        System.out.printf("%-6s %-15s %-12s %-15s %-10s %-6s %-20s %-15s\n",
+                "Token", "Name", "Phone", "Doctor", "Type", "Time", "Problem", "Est. Wait");
+
+        while (temp != null) { // CO2: traversal
+            int wait = estimateWait(temp);
+            System.out.printf("%-6d %-15s %-12s %-15s %-10s %-6s %-20s %-15s\n",
+                    temp.token, temp.name, temp.phone, temp.doctor,
+                    temp.type, temp.time, temp.problem, wait + " mins");
+            temp = temp.next;
+        }
+        navStack.pop();
+    }
+
+    // Estimate wait based on same doctor, Emergency+Normal in list
+    private static int estimateWait(PatientNode p) { // CO2: traversal + counting
+        int count = 0;
+        PatientNode temp = front;
+        while (temp != null) {
+            if (temp.doctor.equalsIgnoreCase(p.doctor)) {
+                count++;
+            }
+            if (temp == p) break;
+            temp = temp.next;
+        }
+        return count * DUR;
+    }
+
+    // ===================== COMPLETE NEXT ====================
+
+    private static void completeNextPatient() {
+        navStack.push("NextPatient"); // CO3
+        if (front == null) {
+            System.out.println("No patients waiting.");
+            navStack.pop();
+            return;
+        }
+        PatientNode p = front;
+        System.out.println("Now Consulting: " + p.name + " with " + p.doctor);
+
+        // Remove from queue
+        front = front.next;      // CO2: dequeue
+        if (front == null) rear = null;
+
+        // Remove from hash maps
+        tokenMap.remove(p.token);            // CO4
+        PatientNode mp = phoneMap.get(p.phone);
+        if (mp == p) phoneMap.remove(p.phone); // CO4
+
+        // Add to history linked list (at head)
+        String completedAt = new Date().toString();
+        HistoryNode h = new HistoryNode(p, completedAt);
+        h.next = historyHead;    // CO2: insert at head in list
+        historyHead = h;
+
+        saveData(); // save after change
+        navStack.pop();
+    }
+
+    // ===================== HISTORY DISPLAY ==================
+
+    private static void printHistory() {
+        navStack.push("History"); // CO3
+        if (historyHead == null) {
+            System.out.println("\n[History] No completed appointments yet.");
+            navStack.pop();
+            return;
+        }
+        System.out.println("\n--- Appointment History (Linked List) ---");
+        System.out.printf("%-6s %-15s %-12s %-15s %-10s %-6s %-20s %-20s\n",
+                "Token", "Name", "Phone", "Doctor", "Type", "Time", "Problem", "Completed At");
+
+        HistoryNode temp = historyHead;
+        while (temp != null) { // CO2: traversal
+            System.out.printf("%-6d %-15s %-12s %-15s %-10s %-6s %-20s %-20s\n",
+                    temp.token, temp.name, temp.phone, temp.doctor,
+                    temp.type, temp.time, temp.problem, temp.completedAt);
+            temp = temp.next;
+        }
+        navStack.pop();
+    }
+
+    // ===================== SEARCH ===========================
+
+    private static void searchMenu() {
+        navStack.push("Search"); // CO3
+        System.out.println("\n--- Search Patient ---");
+        System.out.println("1. By Token");
+        System.out.println("2. By Phone");
+        System.out.print("Choice: ");
+        String c = sc.nextLine();
+
+        if (c.equals("1")) {
+            System.out.print("Enter Token: ");
+            int t = Integer.parseInt(sc.nextLine().trim());
+            PatientNode p = tokenMap.get(t); // CO4: hash lookup
+            if (p != null) printPatientDetails(p);
+            else System.out.println("No patient found with that token.");
+        } else if (c.equals("2")) {
+            System.out.print("Enter Phone: ");
+            String ph = sc.nextLine().trim();
+            PatientNode p = phoneMap.get(ph); // CO4: hash lookup
+            if (p != null) printPatientDetails(p);
+            else System.out.println("No patient found with that phone.");
+        } else {
+            System.out.println("Invalid choice.");
+        }
+        navStack.pop();
+    }
+
+    private static void printPatientDetails(PatientNode p) {
+        System.out.println("\nPatient Details:");
+        System.out.println("Token   : " + p.token);
+        System.out.println("Name    : " + p.name);
+        System.out.println("Phone   : " + p.phone);
+        System.out.println("Doctor  : " + p.doctor);
+        System.out.println("Type    : " + p.type);
+        System.out.println("Time    : " + p.time);
+        System.out.println("Problem : " + p.problem);
+        System.out.println("Est Wait: " + estimateWait(p) + " mins");
+    }
+
+    // ===================== ANALYTICS (SORT) =================
+
+    private static void analyticsMenu() {
+        navStack.push("Analytics"); // CO3
+        System.out.println("\n--- Analytics: Sort Current Queue by Time ---");
+        int size = getQueueSize();
+        if (size == 0) {
+            System.out.println("Queue empty.");
+            navStack.pop();
+            return;
+        }
+        PatientNode[] arr = new PatientNode[size];
+        PatientNode temp = front;
+        int i = 0;
+        while (temp != null) {
+            arr[i++] = temp; // CO2: list to array
+            temp = temp.next;
+        }
+        quickSortByTime(arr, 0, arr.length - 1); // CO1: QuickSort
+
+        System.out.printf("%-6s %-15s %-12s %-15s %-10s %-6s %-20s\n",
+                "Token", "Name", "Phone", "Doctor", "Type", "Time", "Problem");
+        for (PatientNode p : arr) {
+            System.out.printf("%-6d %-15s %-12s %-15s %-10s %-6s %-20s\n",
+                    p.token, p.name, p.phone, p.doctor, p.type, p.time, p.problem);
+        }
+        navStack.pop();
+    }
+
+    private static int getQueueSize() {
+        int c = 0;
+        PatientNode t = front;
+        while (t != null) {
+            c++;
+            t = t.next; // CO2: traversal
+        }
+        return c;
+    }
+
+    // QuickSort by appointment time (HH:MM)
+    private static void quickSortByTime(PatientNode[] arr, int l, int h) { // CO1
+        if (l < h) {
+            int p = partition(arr, l, h);   // CO1: partition
+            quickSortByTime(arr, l, p - 1); // CO1: recursion
+            quickSortByTime(arr, p + 1, h); // CO1: recursion
+        }
+    }
+
+    private static int toMinutes(String time) {
+        try {
+            String[] parts = time.split(":");
+            int h = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]);
+            return h * 60 + m;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    private static int partition(PatientNode[] arr, int l, int h) { // CO1
+        int pivot = toMinutes(arr[h].time);
+        int i = l - 1;
+        for (int j = l; j < h; j++) {
+            if (toMinutes(arr[j].time) <= pivot) {
+                i++;
+                PatientNode tmp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = tmp;
+            }
+        }
+        PatientNode tmp = arr[i + 1];
+        arr[i + 1] = arr[h];
+        arr[h] = tmp;
+        return i + 1;
+    }
+}
