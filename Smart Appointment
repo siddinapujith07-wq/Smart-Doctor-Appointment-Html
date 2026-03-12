@@ -1,369 +1,500 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<title>Smart Doctor Appointment Waiting List System</title>
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<style>
-/* CO1, CO2 – Internet fundamentals, HTML structure, basic & comprehensive CSS (layout, colors, typography, responsive) */
+import java.io.*;
+import java.util.*;
 
-:root{--primary:#1a4d7a;--primary-dark:#0f3354;--accent:#28a745;--bg:#f2f5f9}
-*{box-sizing:border-box}
-body{font-family:Arial,sans-serif;margin:0;background:var(--bg);color:#222}
-a{text-decoration:none;color:inherit}
-.navbar{position:sticky;top:0;z-index:1000;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.08)}
-.navbar-inner{max-width:1100px;margin:auto;padding:10px 20px;display:flex;align-items:center;justify-content:space-between}
-.nav-logo{font-weight:bold;color:var(--primary)}
-.nav-links{display:flex;gap:20px}
-.nav-links a{font-size:14px;padding-bottom:2px;border-bottom:2px solid transparent}
-.nav-links a:hover{border-bottom-color:var(--primary)}
-header{background:linear-gradient(120deg,var(--primary),var(--primary-dark));color:#fff;text-align:center;padding:40px 15px 60px}
-header h1{margin-bottom:10px}
-header p{margin-top:0;opacity:.9}
-.hero-btns{margin-top:20px;display:flex;justify-content:center;gap:10px}
-.btn-primary,.btn-outline{border-radius:4px;padding:10px 18px;border:1px solid #fff;cursor:pointer}
-.btn-primary{background:#fff;color:var(--primary);border:none;font-weight:600}
-.btn-outline{background:transparent;color:#fff}
-.btn-primary:hover{background:#f2f5f9}
-.btn-outline:hover{background:rgba(255,255,255,.1)}
-.section{max-width:1100px;margin:30px auto;padding:0 15px}
-.section h2{text-align:center;margin-bottom:10px}
-.section-subtitle{text-align:center;font-size:14px;color:#555;margin-bottom:25px}
-.doctor-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:20px}
-.doctor-card{background:#fff;border-radius:10px;padding:15px;box-shadow:0 3px 10px rgba(0,0,0,.06);text-align:left}
-.doctor-name{font-weight:bold;margin-bottom:5px}
-.doctor-spec{font-size:14px;color:#555}
-.doctor-meta{margin-top:10px;font-size:13px;color:#777}
-.card{background:#fff;padding:20px;margin:20px auto;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,.1)}
-.card h3{margin-top:0}
-.appointment-layout{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1.4fr);gap:20px}
-@media(max-width:900px){.appointment-layout{grid-template-columns:1fr}}
-input,select{padding:10px;margin:5px 5px 5px 0;width:220px}
-button{padding:10px 15px;background:var(--primary);color:#fff;border:none;cursor:pointer;border-radius:5px}
-button:hover{background:var(--primary-dark)}
-.search{margin-top:10px;width:250px}
-.smsBtn{background:var(--accent)}
-.smsBtn:hover{background:#1e7e34}
-table{width:100%;border-collapse:collapse;margin-top:15px}
-th,td{border:1px solid #ddd;padding:8px;font-size:14px}
-th{background:var(--primary);color:#fff}
-.priority{color:red;font-weight:bold}
-.error-message{color:#b00020;margin-top:10px;font-size:14px}
-.flex-row{display:flex;flex-wrap:wrap;gap:10px}
-.contact-grid{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:20px}
-@media(max-width:800px){.contact-grid{grid-template-columns:1fr}}
-.contact-card{background:#fff;border-radius:10px;padding:20px;box-shadow:0 3px 10px rgba(0,0,0,.06)}
-.contact-card p{margin:5px 0;font-size:14px}
-footer{background:#111827;color:#e5e7eb;padding:20px 15px;margin-top:40px;font-size:13px}
-.footer-inner{max-width:1100px;margin:auto;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
-</style>
-</head>
-<body>
-<nav class="navbar">
-  <div class="navbar-inner">
-    <div class="nav-logo">Smart Clinic</div>
-    <div class="nav-links">
-      <!-- CO1/CO2 – Navigation links, anchors, semantics -->
-      <a href="#home">Home</a>
-      <a href="#doctors">Doctors</a>
-      <a href="#appointments">Appointments</a>
-      <a href="#history">History</a>
-      <a href="#contact">Contact</a>
-      <a href="admin.html">Admin</a> <!-- CO5 – multi-page navigation (deployment-ready structure) -->
-    </div>
-  </div>
-</nav>
+/**
+ * Smart Doctor Appointment Waiting List System
+ * DSA Version for Console (can act as backend logic for your HTML UI)
+ *
+ * DSA used:
+ * - Singly Linked List  : PatientNode for current queue                // CO2
+ * - Singly Linked List  : HistoryNode for completed appointments       // CO2
+ * - Stack<String>       : Navigation stack (screens visited)           // CO3
+ * - HashMap<Integer,PatientNode> : Token -> Node (O(1) search)         // CO4
+ * - HashMap<String,PatientNode>  : Phone -> Node (O(1) search)         // CO4
+ * - QuickSort on array  : To display sorted by appointment time        // CO1
+ * - File save/load      : Serialization of lists to .dat files
+ */
 
-<header id="home">
-  <!-- CO1 – HTML structure & basic styling -->
-  <h1>Smart Doctor Appointment Waiting List System</h1>
-  <p>Real-time token management and intelligent waiting time prediction for your clinic.</p>
-  <div class="hero-btns">
-    <button class="btn-primary" onclick="scrollToSection('appointments')">Book Appointment</button>
-    <button class="btn-outline" onclick="scrollToSection('doctors')">View Doctors</button>
-    <!-- CO4 – DOM interactivity via onclick, smooth scroll -->
-  </div>
-</header>
+ // ---------- NODE CLASSES (Serializable) ----------
 
-<section class="section" id="doctors">
-  <h2>Our Doctors</h2>
-  <p class="section-subtitle">Choose from experienced specialists available at our clinic.</p>
-  <div class="doctor-grid">
-    <!-- CO2 – semantic content cards with CSS grid layout -->
-    <div class="doctor-card">
-      <div class="doctor-name">Dr Kumar</div>
-      <div class="doctor-spec">Cardiologist</div>
-      <div class="doctor-meta">Experience: 12+ years<br>Timings: 9:00 AM – 1:00 PM</div>
-    </div>
-    <div class="doctor-card">
-      <div class="doctor-name">Dr Reddy</div>
-      <div class="doctor-spec">General Physician</div>
-      <div class="doctor-meta">Experience: 8+ years<br>Timings: 10:00 AM – 4:00 PM</div>
-    </div>
-    <div class="doctor-card">
-      <div class="doctor-name">Dr Sharma</div>
-      <div class="doctor-spec">Pediatrician</div>
-      <div class="doctor-meta">Experience: 10+ years<br>Timings: 5:00 PM – 9:00 PM</div>
-    </div>
-  </div>
-</section>
+class PatientNode implements Serializable { // CO2: Node for queue ADT (singly linked list)
+    int token;
+    String name, phone, doctor, type, time, problem;
+    boolean notified;
+    transient PatientNode next; // 'next' is not serialized  // CO2: Linked list pointer
 
-<section class="section" id="appointments">
-  <h2>Appointments & Live Queue</h2>
-  <p class="section-subtitle">Book your slot and track your estimated waiting time in real-time.</p>
-  <div class="appointment-layout">
-    <div class="card">
-      <h3>Book Appointment</h3>
-      <div class="flex-row">
-        <!-- CO2 – HTML form fields, attributes (placeholder, pattern), basic validation hooks -->
-        <input id="name" placeholder="Patient Name">
-        <input id="phone" type="tel" placeholder="Phone Number" pattern="[0-9]{10}" title="Enter 10 digit mobile number">
-        <input id="time" type="time">
-        <select id="doctor">
-          <option value="">Select Doctor</option>
-          <option>Dr Kumar</option><option>Dr Reddy</option><option>Dr Sharma</option>
-        </select>
-        <select id="type">
-          <option value="Normal">Normal</option>
-          <option value="Emergency">Emergency</option>
-        </select>
-        <input id="problem" placeholder="Health Problem">
-      </div>
-      <div id="formError" class="error-message" aria-live="polite"></div>
-      <br>
-      <button id="btnAdd">Get Token</button> <!-- CO4 – JS event-driven form handling -->
-    </div>
-
-    <div class="card">
-      <h3>Live Waiting Queue</h3>
-      <!-- CO4 – search filter input bound to DOM updates -->
-      <input class="search" id="search" placeholder="Search by patient name or phone">
-      <div id="currentInfo" style="font-size:14px;margin-top:5px;color:#555"></div>
-      <!-- CO2 – table-based structured data display -->
-      <table>
-        <thead>
-        <tr>
-          <th>Token</th><th>Name</th><th>Phone</th><th>Doctor</th><th>Type</th>
-          <th>Time</th><th>Problem</th><th>Estimated Wait</th><th>SMS Reminder</th>
-        </tr>
-        </thead>
-        <tbody id="list"></tbody>
-      </table>
-      <br>
-      <button id="btnNext">Doctor Call Next</button> <!-- CO4 – DOM event to change queue state -->
-    </div>
-  </div>
-</section>
-
-<section class="section" id="history">
-  <h2>Appointment History</h2>
-  <p class="section-subtitle">Completed consultations stored locally in your browser.</p>
-  <div class="card">
-    <!-- CO4 – search/filter over history table -->
-    <input id="historySearch" placeholder="Search by name or phone" class="search">
-    <table>
-      <thead>
-      <tr>
-        <th>Token</th><th>Name</th><th>Phone</th><th>Doctor</th>
-        <th>Type</th><th>Time</th><th>Problem</th><th>Completed At</th>
-      </tr>
-      </thead>
-      <tbody id="historyList"></tbody>
-    </table>
-  </div>
-</section>
-
-<section class="section" id="contact">
-  <h2>Contact & Location</h2>
-  <p class="section-subtitle">Visit us or call to know more about our services.</p>
-  <div class="contact-grid">
-    <div class="contact-card">
-      <h3>Clinic Details</h3>
-      <p><strong>Address:</strong> 123 Smart Health Street, Hyderabad</p>
-      <p><strong>Phone:</strong> +91 98765 43210</p>
-      <p><strong>Working Hours:</strong> 9:00 AM – 9:00 PM (All days)</p>
-      <p><strong>Email:</strong> info@smartclinic.com</p>
-    </div>
-    <div class="contact-card">
-      <h3>Quick Message (UI only)</h3>
-      <p>This is a static form; you can later connect it to a backend or email API.</p>
-      <input placeholder="Your Name" style="width:100%;margin-bottom:8px">
-      <input type="email" placeholder="Your Email" style="width:100%;margin-bottom:8px">
-      <textarea placeholder="Message" rows="4" style="width:100%;padding:8px"></textarea>
-      <br><br>
-      <button disabled title="Connect to backend to enable">Send Message</button>
-      <!-- CO5 – placeholder for API integration & deployment in future -->
-    </div>
-  </div>
-</section>
-
-<footer>
-  <div class="footer-inner">
-    <div>© <span id="year"></span> Smart Clinic. All rights reserved.</div>
-    <div>Smart Doctor Appointment Waiting List System.</div>
-  </div>
-</footer>
-
-<script>
-/* CO3 – JavaScript fundamentals (constants, variables, objects) */
-/* CO4 – DOM & events, browser APIs (Notification, speechSynthesis, localStorage) */
-/* CO5 – Advanced web app behavior suitable for deployment */
-
-const DUR=8, WIN=30, KEYS={Q:"queue",T:"token",H:"history"};
-let queue=[],history=[],token=1,notifReq=false;
-const $=id=>document.getElementById(id);
-const esc=s=>s?String(s).replace(/[&<>'"]/g,t=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;","\"":"&quot;"}[t]||t)):"";
-
-function loadData(){  // CO3 – JSON parsing, error handling idea
-  try{
-    queue=JSON.parse(localStorage.getItem(KEYS.Q))||[];
-    token=JSON.parse(localStorage.getItem(KEYS.T))||1;
-    history=JSON.parse(localStorage.getItem(KEYS.H))||[];
-  }catch{queue=[];history=[];token=1}
-}
-
-function saveData(){ // CO3/CO4 – using localStorage for persistent state
-  localStorage.setItem(KEYS.Q,JSON.stringify(queue));
-  localStorage.setItem(KEYS.T,JSON.stringify(token));
-  localStorage.setItem(KEYS.H,JSON.stringify(history));
-}
-
-function reqNotif(){ // CO4 – browser Notification API usage
-  if(!notifReq&&"Notification"in window){Notification.requestPermission();notifReq=true;}
-}
-
-function speak(t){ // CO4 – Web Speech API for interactivity
-  if(!("speechSynthesis"in window))return;
-  const u=new SpeechSynthesisUtterance(t);u.lang="en-US";speechSynthesis.speak(u);
-}
-
-function scrollToSection(id){
-  const el=$(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});
-}
-
-function vals(){ // CO3 – object return, basic JS expressions
-  return{n:$("name").value.trim(),p:$("phone").value.trim(),tm:$("time").value,d:$("doctor").value,ty:$("type").value,pr:$("problem").value.trim()};
-}
-
-function validate(v){ // CO3 – conditions, regex, arrays
-  const e=[];
-  if(!v.n)e.push("Patient name is required.");
-  if(!v.p)e.push("Phone number is required.");else if(!/^[0-9]{10}$/.test(v.p))e.push("Phone number must be 10 digits.");
-  if(!v.tm)e.push("Appointment time is required.");
-  if(!v.d)e.push("Doctor selection is required.");
-  if(!v.pr)e.push("Health problem is required.");
-  return e;
-}
-
-function showErr(e){$("formError").textContent=e.join(" ");}
-
-function clearForm(){["name","phone","time","problem"].forEach(id=>$(id).value="");$("doctor").value="";$("type").value="Normal";}
-
-function waitM(p){ // CO3/CO4 – array filter, findIndex, simple math
-  const dq=queue.filter(x=>x.doctor===p.doctor);
-  const pos=dq.findIndex(x=>x.token===p.token);
-  return(pos+1)*DUR;
-}
-
-function addPatient(){ // CO3/CO4 – event-driven JS logic
-  reqNotif();
-  const v=vals(),e=validate(v);
-  if(e.length)return showErr(e);
-  showErr([]);
-  const p={token:token++,name:v.n,phone:v.p,time:v.tm,doctor:v.d,type:v.ty,problem:v.pr,notified:false};
-  if(v.ty==="Emergency"){
-    const i=queue.findIndex(x=>x.type==="Normal");
-    i===-1?queue.push(p):queue.splice(i,0,p);
-  }else queue.push(p);
-  saveData();renderQueue();clearForm();
-}
-
-function nextPatient(){ // CO4 – modifies queue and pushes to history
-  if(!queue.length)return alert("No patients waiting.");
-  const p=queue[0];
-  history.push({...p,completedAt:new Date().toISOString()});
-  alert(`Now Consulting: ${p.name} with ${p.doctor}`);
-  queue.shift();saveData();renderQueue();renderHistory();
-}
-
-function row(p){ // CO4 – DOM create + innerHTML
-  const tr=document.createElement("tr");
-  tr.innerHTML=`
-    <td>${p.token}</td><td>${esc(p.name)}</td><td>${esc(p.phone)}</td>
-    <td>${esc(p.doctor)}</td>
-    <td class="${p.type==="Emergency"?"priority":""}">${esc(p.type)}</td>
-    <td>${esc(p.time)}</td><td>${esc(p.problem)}</td>
-    <td>${waitM(p)} mins</td><td></td>`;
-  const b=document.createElement("button");
-  b.className="smsBtn";b.textContent="Send SMS";
-  b.onclick=()=>sendSMS(p.phone,p.name);
-  tr.lastElementChild.appendChild(b);
-  return tr;
-}
-
-function renderQueue(f=""){ // CO4 – DOM update based on state
-  const tb=$("list"),info=$("currentInfo");
-  tb.innerHTML="";
-  if(!queue.length)info.textContent="No patients waiting.";
-  else{
-    const[fst,nxt]=[queue[0],queue[1]];
-    info.textContent=`Next: ${fst.name} (${fst.doctor})`+(nxt?` | After that: ${nxt.name}`:"");
-  }
-  const q=f.toLowerCase();
-  queue.forEach(p=>{
-    if(q && !p.name.toLowerCase().includes(q) && !p.phone.toLowerCase().includes(q))return;
-    tb.appendChild(row(p));
-  });
-}
-
-function renderHistory(f=""){ // CO4 – DOM history view, sort, filter
-  const tb=$("historyList");if(!tb)return;
-  tb.innerHTML="";
-  const q=f.toLowerCase();
-  [...history].sort((a,b)=>new Date(b.completedAt)-new Date(a.completedAt))
-    .forEach(h=>{
-      if(q && !h.name.toLowerCase().includes(q) && !h.phone.toLowerCase().includes(q))return;
-      const tr=document.createElement("tr");
-      tr.innerHTML=`
-        <td>${h.token}</td><td>${esc(h.name)}</td><td>${esc(h.phone)}</td>
-        <td>${esc(h.doctor)}</td>
-        <td class="${h.type==="Emergency"?"priority":""}">${esc(h.type)}</td>
-        <td>${esc(h.time)}</td><td>${esc(h.problem)}</td>
-        <td>${new Date(h.completedAt).toLocaleString()}</td>`;
-      tb.appendChild(tr);
-    });
-}
-
-function sendSMS(ph,name){ // CO4 – device integration via sms: URL
-  const m=`Hello ${name}, this is a reminder from the clinic. Your appointment is coming soon. Please be ready.`;
-  window.location.href=`sms:${encodeURIComponent(ph)}?body=${encodeURIComponent(m)}`;
-}
-
-function checkUpcoming(){ // CO4/CO5 – timed notifications, scheduling logic
-  const now=new Date(),cur=now.getHours()*60+now.getMinutes();
-  queue.forEach(p=>{
-    if(!p.time)return;
-    const[h,m]=p.time.split(":"),ap=parseInt(h,10)*60+parseInt(m,10),d=ap-cur;
-    if(d<=WIN && d>0 && !p.notified){
-      p.notified=true;saveData();
-      const msg=`Reminder: ${p.name}, your appointment with ${p.doctor} is in ${d} minutes. Please be ready.`;
-      if("Notification"in window && Notification.permission==="granted")
-        new Notification("Doctor Appointment Reminder",{body:msg});
-      speak(msg);
+    public PatientNode(int token, String name, String phone,
+                       String doctor, String type, String time, String problem) {
+        this.token = token;
+        this.name = name;
+        this.phone = phone;
+        this.doctor = doctor;
+        this.type = type;
+        this.time = time;
+        this.problem = problem;
+        this.notified = false;
     }
-  });
 }
 
-function init(){ // CO3/CO4 – application bootstrap
-  loadData();renderQueue();renderHistory();
-  $("btnAdd").onclick=addPatient;
-  $("btnNext").onclick=nextPatient;
-  $("search").onkeyup=()=>renderQueue($("search").value);
-  $("historySearch").onkeyup=()=>renderHistory($("historySearch").value);
-  $("year").textContent=new Date().getFullYear();
-  checkUpcoming();setInterval(checkUpcoming,60000);
+class HistoryNode implements Serializable { // CO2: Node for history ADT (singly linked list)
+    int token;
+    String name, phone, doctor, type, time, problem, completedAt;
+    transient HistoryNode next; // CO2
+
+    public HistoryNode(PatientNode p, String completedAt) {
+        this.token = p.token;
+        this.name = p.name;
+        this.phone = p.phone;
+        this.doctor = p.doctor;
+        this.type = p.type;
+        this.time = p.time;
+        this.problem = p.problem;
+        this.completedAt = completedAt;
+    }
 }
-document.addEventListener("DOMContentLoaded",init);
-</script>
-</body>
-</html>
+
+// ---------- MAIN CLASS ----------
+
+public class SmartClinicDSA {
+
+    private static final int DUR = 8;   // minutes per patient per doctor
+    private static final int WIN = 30;  // reminder window in minutes
+
+    // Files for persistence
+    private static final String QUEUE_FILE = "queue.dat";
+    private static final String HISTORY_FILE = "history.dat";
+    private static final String TOKEN_FILE = "token.dat";
+
+    // Queue as Singly Linked List
+    private static PatientNode front = null; // CO2: front pointer of queue
+    private static PatientNode rear = null;  // CO2: rear pointer of queue
+
+    // History as Singly Linked List
+    private static HistoryNode historyHead = null; // CO2: head of history list
+
+    // Hashing for O(1) lookup
+    private static HashMap<Integer, PatientNode> tokenMap = new HashMap<>();  // CO4
+    private static HashMap<String, PatientNode> phoneMap = new HashMap<>();   // CO4
+
+    // Navigation stack
+    private static Stack<String> navStack = new Stack<>(); // CO3: stack ADT
+
+    private static int nextToken = 1;
+    private static Scanner sc = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        loadData();          // load queue + history + token if files exist
+        runMainMenu();
+        saveData();          // final save on exit
+    }
+
+    // ===================== SAVE / LOAD ========================
+
+    private static void loadData() {
+        // Load queue
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(QUEUE_FILE))) {
+            @SuppressWarnings("unchecked")
+            List<PatientNode> list = (List<PatientNode>) in.readObject();
+            front = rear = null;
+            tokenMap.clear();
+            phoneMap.clear();
+            for (PatientNode p : list) {
+                p.next = null;
+                enqueuePatient(p);  // CO2 + CO4: rebuild linked list + maps
+            }
+        } catch (Exception e) {
+            // first run or error -> start fresh
+        }
+
+        // Load history
+        try (ObjectInputStream in = new ObjectInputStream(new FileInputStream(HISTORY_FILE))) {
+            @SuppressWarnings("unchecked")
+            List<HistoryNode> list = (List<HistoryNode>) in.readObject();
+            historyHead = null;
+            for (HistoryNode h : list) {
+                h.next = historyHead;
+                historyHead = h; // CO2: insert at head of history list
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // Load nextToken
+        try (DataInputStream in = new DataInputStream(new FileInputStream(TOKEN_FILE))) {
+            nextToken = in.readInt();
+        } catch (Exception e) {
+            nextToken = 1;
+        }
+    }
+
+    private static void saveData() {
+        // queue -> list
+        List<PatientNode> qList = new ArrayList<>();
+        PatientNode t = front;
+        while (t != null) {
+            qList.add(t);
+            t = t.next; // CO2: traversal of queue list
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(QUEUE_FILE))) {
+            out.writeObject(qList);
+        } catch (IOException e) {
+            System.out.println("Error saving queue: " + e.getMessage());
+        }
+
+        // history -> list
+        List<HistoryNode> hList = new ArrayList<>();
+        HistoryNode h = historyHead;
+        while (h != null) {
+            hList.add(h);
+            h = h.next; // CO2: traversal of history list
+        }
+        try (ObjectOutputStream out = new ObjectOutputStream(new FileOutputStream(HISTORY_FILE))) {
+            out.writeObject(hList);
+        } catch (IOException e) {
+            System.out.println("Error saving history: " + e.getMessage());
+        }
+
+        // nextToken
+        try (DataOutputStream out = new DataOutputStream(new FileOutputStream(TOKEN_FILE))) {
+            out.writeInt(nextToken);
+        } catch (IOException e) {
+            System.out.println("Error saving token: " + e.getMessage());
+        }
+    }
+
+    // ===================== MAIN MENU ========================
+
+    private static void runMainMenu() {
+        navStack.push("Home"); // CO3: push current screen
+        boolean run = true;
+        while (run) {
+            System.out.println("\n=== SMART DOCTOR APPOINTMENT WAITING LIST SYSTEM (DSA) ===");
+            System.out.println("1. Add Patient (Get Token)");
+            System.out.println("2. View Live Queue");
+            System.out.println("3. Doctor Call Next (Complete Appointment)");
+            System.out.println("4. View History");
+            System.out.println("5. Search Patient (Token / Phone)");
+            System.out.println("6. Analytics (Sort by Time)");
+            System.out.println("7. Show Navigation Stack");
+            System.out.println("8. Exit");
+            System.out.print("Choice: ");
+
+            String c = sc.nextLine();
+            switch (c) {
+                case "1" -> addPatientMenu();       // CO2 + CO4
+                case "2" -> printQueue();           // CO2
+                case "3" -> completeNextPatient();  // CO2 + CO4
+                case "4" -> printHistory();         // CO2
+                case "5" -> searchMenu();           // CO4
+                case "6" -> analyticsMenu();        // CO1
+                case "7" -> System.out.println("Stack: " + navStack); // CO3
+                case "8" -> run = false;
+                default -> System.out.println("Invalid choice.");
+            }
+        }
+        navStack.pop(); // CO3: pop on exit
+        System.out.println("Exiting SmartClinicDSA...");
+    }
+
+    // ===================== ADD PATIENT ======================
+
+    private static void addPatientMenu() {
+        navStack.push("AddPatient"); // CO3
+        System.out.println("\n--- Book Appointment / Get Token ---");
+        System.out.print("Patient Name: ");
+        String name = sc.nextLine().trim();
+
+        System.out.print("Phone (10 digits): ");
+        String phone = sc.nextLine().trim();
+
+        System.out.print("Appointment Time (HH:MM, 24-hr): ");
+        String time = sc.nextLine().trim();
+
+        System.out.print("Doctor (Dr Kumar / Dr Reddy / Dr Sharma): ");
+        String doctor = sc.nextLine().trim();
+
+        System.out.print("Type (Normal / Emergency): ");
+        String type = sc.nextLine().trim();
+        if (!type.equalsIgnoreCase("Emergency")) {
+            type = "Normal";
+        }
+
+        System.out.print("Health Problem: ");
+        String problem = sc.nextLine().trim();
+
+        List<String> errors = validate(name, phone, time, doctor, problem);
+        if (!errors.isEmpty()) {
+            System.out.println("Form Errors:");
+            for (String e : errors) System.out.println("- " + e);
+            navStack.pop();
+            return;
+        }
+
+        PatientNode p = new PatientNode(nextToken++, name, phone, doctor, type, time, problem);
+        enqueuePatient(p); // CO2 enqueue, CO4 update maps, CO3 priority queue behavior
+        System.out.println("Token Generated Successfully. Your Token No: " + p.token);
+        saveData(); // save after change
+        navStack.pop();
+    }
+
+    // Linked List enqueue with priority: Emergency before first Normal
+    // CO2: queue ADT using singly linked list
+    // CO3: models real-world waiting queue with emergency priority
+    private static void enqueuePatient(PatientNode p) { // CO2, CO3
+        if (front == null) {
+            front = rear = p; // first node
+        } else if (p.type.equalsIgnoreCase("Emergency")) {
+            // find first Normal and insert before it
+            PatientNode prev = null, curr = front;
+            while (curr != null && curr.type.equalsIgnoreCase("Emergency")) {
+                prev = curr;
+                curr = curr.next;
+            }
+            if (prev == null) {        // insert at head
+                p.next = front;
+                front = p;
+            } else {                    // insert between prev and curr
+                prev.next = p;
+                p.next = curr;
+                if (curr == null) rear = p;
+            }
+        } else {
+            // Normal -> insert at end
+            rear.next = p;
+            rear = p;
+        }
+        tokenMap.put(p.token, p);   // CO4: hash insert
+        phoneMap.put(p.phone, p);   // CO4: hash insert
+    }
+
+    // ===================== VALIDATION =======================
+
+    private static List<String> validate(String name, String phone, String time,
+                                         String doctor, String problem) {
+        List<String> e = new ArrayList<>();
+        if (name.isEmpty()) e.add("Patient name is required.");
+        if (phone.isEmpty()) e.add("Phone number is required.");
+        else if (!phone.matches("\\d{10}")) e.add("Phone number must be 10 digits.");
+        if (time.isEmpty()) e.add("Appointment time is required.");
+        if (doctor.isEmpty()) e.add("Doctor selection is required.");
+        if (problem.isEmpty()) e.add("Health problem is required.");
+        return e;
+    }
+
+    // ===================== QUEUE DISPLAY ====================
+
+    private static void printQueue() {
+        navStack.push("Queue"); // CO3
+        if (front == null) {
+            System.out.println("\n[Queue] No patients waiting.");
+            navStack.pop();
+            return;
+        }
+        System.out.println("\n--- Live Waiting Queue (Linked List) ---");
+        PatientNode temp = front;
+        PatientNode fst = front;
+        PatientNode nxt = front.next;
+        System.out.println("Next: " + fst.name + " (" + fst.doctor + ")" +
+                (nxt != null ? " | After that: " + nxt.name : ""));
+
+        System.out.printf("%-6s %-15s %-12s %-15s %-10s %-6s %-20s %-15s\n",
+                "Token", "Name", "Phone", "Doctor", "Type", "Time", "Problem", "Est. Wait");
+
+        while (temp != null) { // CO2: traversal
+            int wait = estimateWait(temp);
+            System.out.printf("%-6d %-15s %-12s %-15s %-10s %-6s %-20s %-15s\n",
+                    temp.token, temp.name, temp.phone, temp.doctor,
+                    temp.type, temp.time, temp.problem, wait + " mins");
+            temp = temp.next;
+        }
+        navStack.pop();
+    }
+
+    // Estimate wait based on same doctor, Emergency+Normal in list
+    private static int estimateWait(PatientNode p) { // CO2: traversal + counting
+        int count = 0;
+        PatientNode temp = front;
+        while (temp != null) {
+            if (temp.doctor.equalsIgnoreCase(p.doctor)) {
+                count++;
+            }
+            if (temp == p) break;
+            temp = temp.next;
+        }
+        return count * DUR;
+    }
+
+    // ===================== COMPLETE NEXT ====================
+
+    private static void completeNextPatient() {
+        navStack.push("NextPatient"); // CO3
+        if (front == null) {
+            System.out.println("No patients waiting.");
+            navStack.pop();
+            return;
+        }
+        PatientNode p = front;
+        System.out.println("Now Consulting: " + p.name + " with " + p.doctor);
+
+        // Remove from queue
+        front = front.next;      // CO2: dequeue
+        if (front == null) rear = null;
+
+        // Remove from hash maps
+        tokenMap.remove(p.token);            // CO4
+        PatientNode mp = phoneMap.get(p.phone);
+        if (mp == p) phoneMap.remove(p.phone); // CO4
+
+        // Add to history linked list (at head)
+        String completedAt = new Date().toString();
+        HistoryNode h = new HistoryNode(p, completedAt);
+        h.next = historyHead;    // CO2: insert at head in list
+        historyHead = h;
+
+        saveData(); // save after change
+        navStack.pop();
+    }
+
+    // ===================== HISTORY DISPLAY ==================
+
+    private static void printHistory() {
+        navStack.push("History"); // CO3
+        if (historyHead == null) {
+            System.out.println("\n[History] No completed appointments yet.");
+            navStack.pop();
+            return;
+        }
+        System.out.println("\n--- Appointment History (Linked List) ---");
+        System.out.printf("%-6s %-15s %-12s %-15s %-10s %-6s %-20s %-20s\n",
+                "Token", "Name", "Phone", "Doctor", "Type", "Time", "Problem", "Completed At");
+
+        HistoryNode temp = historyHead;
+        while (temp != null) { // CO2: traversal
+            System.out.printf("%-6d %-15s %-12s %-15s %-10s %-6s %-20s %-20s\n",
+                    temp.token, temp.name, temp.phone, temp.doctor,
+                    temp.type, temp.time, temp.problem, temp.completedAt);
+            temp = temp.next;
+        }
+        navStack.pop();
+    }
+
+    // ===================== SEARCH ===========================
+
+    private static void searchMenu() {
+        navStack.push("Search"); // CO3
+        System.out.println("\n--- Search Patient ---");
+        System.out.println("1. By Token");
+        System.out.println("2. By Phone");
+        System.out.print("Choice: ");
+        String c = sc.nextLine();
+
+        if (c.equals("1")) {
+            System.out.print("Enter Token: ");
+            int t = Integer.parseInt(sc.nextLine().trim());
+            PatientNode p = tokenMap.get(t); // CO4: hash lookup
+            if (p != null) printPatientDetails(p);
+            else System.out.println("No patient found with that token.");
+        } else if (c.equals("2")) {
+            System.out.print("Enter Phone: ");
+            String ph = sc.nextLine().trim();
+            PatientNode p = phoneMap.get(ph); // CO4: hash lookup
+            if (p != null) printPatientDetails(p);
+            else System.out.println("No patient found with that phone.");
+        } else {
+            System.out.println("Invalid choice.");
+        }
+        navStack.pop();
+    }
+
+    private static void printPatientDetails(PatientNode p) {
+        System.out.println("\nPatient Details:");
+        System.out.println("Token   : " + p.token);
+        System.out.println("Name    : " + p.name);
+        System.out.println("Phone   : " + p.phone);
+        System.out.println("Doctor  : " + p.doctor);
+        System.out.println("Type    : " + p.type);
+        System.out.println("Time    : " + p.time);
+        System.out.println("Problem : " + p.problem);
+        System.out.println("Est Wait: " + estimateWait(p) + " mins");
+    }
+
+    // ===================== ANALYTICS (SORT) =================
+
+    private static void analyticsMenu() {
+        navStack.push("Analytics"); // CO3
+        System.out.println("\n--- Analytics: Sort Current Queue by Time ---");
+        int size = getQueueSize();
+        if (size == 0) {
+            System.out.println("Queue empty.");
+            navStack.pop();
+            return;
+        }
+        PatientNode[] arr = new PatientNode[size];
+        PatientNode temp = front;
+        int i = 0;
+        while (temp != null) {
+            arr[i++] = temp; // CO2: list to array
+            temp = temp.next;
+        }
+        // CO1: QuickSort algorithm used to sort patients by appointment time
+        quickSortByTime(arr, 0, arr.length - 1); // CO1: QuickSort
+
+        System.out.printf("%-6s %-15s %-12s %-15s %-10s %-6s %-20s\n",
+                "Token", "Name", "Phone", "Doctor", "Type", "Time", "Problem");
+        for (PatientNode p : arr) {
+            System.out.printf("%-6d %-15s %-12s %-15s %-10s %-6s %-20s\n",
+                    p.token, p.name, p.phone, p.doctor, p.type, p.time, p.problem);
+        }
+        navStack.pop();
+    }
+
+    private static int getQueueSize() {
+        int c = 0;
+        PatientNode t = front;
+        while (t != null) {
+            c++;
+            t = t.next; // CO2: traversal
+        }
+        return c;
+    }
+
+    // QuickSort by appointment time (HH:MM)
+    // CO1: QuickSort algorithm for sorting by key (time)
+    private static void quickSortByTime(PatientNode[] arr, int l, int h) { // CO1
+        if (l < h) {
+            int p = partition(arr, l, h);   // CO1: partition
+            quickSortByTime(arr, l, p - 1); // CO1: recursion
+            quickSortByTime(arr, p + 1, h); // CO1: recursion
+        }
+    }
+
+    // CO1: Convert time string to minutes to compare keys in sorting
+    private static int toMinutes(String time) { // CO1
+        try {
+            String[] parts = time.split(":");
+            int h = Integer.parseInt(parts[0]);
+            int m = Integer.parseInt(parts[1]);
+            return h * 60 + m;
+        } catch (Exception e) {
+            return 0;
+        }
+    }
+
+    // CO1: Partition step used by QuickSort
+    private static int partition(PatientNode[] arr, int l, int h) { // CO1
+        int pivot = toMinutes(arr[h].time);
+        int i = l - 1;
+        for (int j = l; j < h; j++) {
+            if (toMinutes(arr[j].time) <= pivot) {
+                i++;
+                PatientNode tmp = arr[i];
+                arr[i] = arr[j];
+                arr[j] = tmp;
+            }
+        }
+        PatientNode tmp = arr[i + 1];
+        arr[i + 1] = arr[h];
+        arr[h] = tmp;
+        return i + 1;
+    }
+}
