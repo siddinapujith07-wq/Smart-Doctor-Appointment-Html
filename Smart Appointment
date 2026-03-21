@@ -1,6 +1,5 @@
 import java.io.*;
 import java.util.*;
-
 /**
  * Smart Doctor Appointment Waiting List System
  * DSA Version for Console (can act as backend logic for your HTML UI)
